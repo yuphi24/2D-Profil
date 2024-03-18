@@ -14,14 +14,24 @@ import geojson from "@/assets/data/heatflow_sample_data.geojson";
 
 // store
 import { useMapControlsStore } from "@/store/mapControls";
+import { useanAlysisFunctionsStore } from "@/store/analysisFunctions";
 
 // component
 import LineChart from "./analysis/LineChart.vue";
+
+// to call function "addHFData from LineChart.vue"
+const lineChart = ref();
+const updateQChart = () => {
+  console.log("fonction 'addHFData' from LineChart.vue is called")
+  lineChart.value.addHFData();
+};
 
 const mapContainer = ref();
 const map = ref();
 const mapControls = useMapControlsStore();
 const draw = mapControls.mapboxDraw;
+const analysisFunctions = useanAlysisFunctionsStore();
+const getPoint = analysisFunctions.getPointsWithin150km;
 // const calculatedArea = ref("");
 
 // for basemaps
@@ -116,9 +126,6 @@ onMounted(() => {
     map.value.on("click", "sites", (e) => {
       const coordinates = e.features[0].geometry.coordinates.slice();
       const id = e.features[0].properties.id;
-      while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-      }
       new Popup().setLngLat(coordinates).setHTML(id).addTo(map.value);
     });
 
@@ -141,57 +148,21 @@ onMounted(() => {
     // map.value.on("draw.update", updateArea);
 
     // get points within 150km of line
-    map.value.on("draw.create", (event) => {
-      const lineCoordinates = event.features[0].geometry.coordinates;
-      const line = turf.lineString(lineCoordinates);
-      const pointsWithin150km = getPointsWithin150km(line, geojson);
-      console.log(line);
-      console.log(pointsWithin150km);
-    });
+    map.value.on("draw.create", getPoint);
+    map.value.on("draw.update", getPoint);
+
+    // draw line chart of q-value
+    map.value.on("draw.create", updateQChart);
+    map.value.on("draw.delete", updateQChart);
+    map.value.on("draw.update", updateQChart);
   });
 });
-
-function getPointsWithin150km(line, geojson) {
-  const pointsWithin150km = geojson.features.filter((feature) => {
-    // get coordinate of point
-    const pointCoordinates = feature.geometry.coordinates;
-    // distance between point and line
-    const distance = turf.pointToLineDistance(
-      turf.point(pointCoordinates),
-      line,
-      { units: "kilometers" }
-    );
-    // if within 50m => true
-    return distance <= 150;
-  });
-  return pointsWithin150km;
-}
-
-// flächen berechnen as turf test
-// function updateArea(e) {
-//   const data = draw.getAll();
-//   if (data.features.length > 0) {
-//     const area = turf.area(data) / 1000000;
-//     const roundedArea = Math.round(area * 100) / 100;
-//     calculatedArea.value = roundedArea;
-//     console.log(data);
-//   } else {
-//     calculatedArea.value = "";
-//     if (e.type !== "draw.delete") {
-//       alert("Click the map to draw a polygon.");
-//     }
-//   }
-// }
 </script>
 
 <template>
   <div class="map-wrap">
     <div class="map" ref="mapContainer" @mousemove="updateLatLng"></div>
-    <!-- <div class="calculation-box">
-      <p></p>
-      <p class="calculated-area">{{ calculatedArea }} km^2</p>
-    </div> -->
-    <LineChart />
+    <LineChart ref="lineChart" />
   </div>
 </template>
 
@@ -209,18 +180,6 @@ function getPointsWithin150km(line, geojson) {
   /* position: relative; */
   width: 100%;
   height: 100%;
-}
-
-.calculation-box {
-  height: 90px;
-  width: 150px;
-  position: absolute;
-  bottom: 40px;
-  left: 10px;
-  background-color: rgba(255, 255, 255, 0.9);
-  padding: 15px;
-  margin-bottom: 5px;
-  text-align: center;
 }
 
 p {

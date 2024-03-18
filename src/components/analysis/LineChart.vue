@@ -1,9 +1,15 @@
 <script setup>
 import { ref, computed } from "vue";
 import VueApexCharts from "vue3-apexcharts";
-const apexchart = VueApexCharts;
+import { useMapControlsStore } from "@/store/mapControls";
+import { useanAlysisFunctionsStore } from "@/store/analysisFunctions";
 
-const chartOptions = {
+const apexchart = VueApexCharts;
+const mapControls = useMapControlsStore();
+const draw = mapControls.mapboxDraw;
+const analysisFunctions = useanAlysisFunctionsStore();
+
+const initialChartOptions = {
   chart: {
     height: 350,
     type: "line",
@@ -16,29 +22,36 @@ const chartOptions = {
     curve: "straight",
   },
   title: {
-    text: "2D Profil",
+    text: "Heat-Flow Data (Demo)",
     align: "left",
   },
   grid: {
     row: {
-      colors: ["#f3f3f3", "transparent"], // takes an array which will be repeated on columns
+      colors: ["#f3f3f3", "transparent"],
       opacity: 0.5,
     },
   },
+  noData: {
+    text: "Loading...",
+  },
   xaxis: {
-    categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"],
+    type: "numeric",
+    title: {
+      text: "longitude",
+    },
+  },
+  yaxis: {
+    title: {
+      text: "heat flow value (q)",
+    },
   },
 };
 
-const series = [
-  {
-    name: "Desktops",
-    data: [10, 41, 35, 51, 49, 62, 69, 91, 148],
-  },
-];
+const chartOptions = initialChartOptions;
+const series = ref([]);
 
+// Adjust the height/width of the chart to the chartContainer.
 const chartContainer = ref(null);
-
 const chartHeight = computed(() => {
   // calculate height of chartContainer
   if (chartContainer.value) {
@@ -47,7 +60,6 @@ const chartHeight = computed(() => {
     return "100%"; // if chartContainer = null, default height
   }
 });
-
 const chartWidth = computed(() => {
   // calculate width of chartContainer
   if (chartContainer.value) {
@@ -55,6 +67,52 @@ const chartWidth = computed(() => {
   } else {
     return "100%"; // if chartContainer = null, default width
   }
+});
+
+// add HF-Data in the Chart
+const addHFData = async () => {
+  const data = draw.getAll();
+  if (data.features.length > 0) {
+    try {
+      const points = analysisFunctions.pointsWithin150km;
+      console.log("points data below");
+      console.log(points);
+      
+      const newData = points.map((item) => ({
+        x: item.geometry.coordinates[0],
+        y: item.properties.q,
+      }));
+
+      newData.sort((a, b) => a.x - b.x);
+      console.log("newData below");
+      console.log(newData);
+
+      chartOptions.value = {
+        ...chartOptions.value,
+        xaxis: {
+          categories: points.map(
+            (item) => item.geometry.coordinates[0]
+          ),
+        },
+      };
+
+      series.value = [
+        {
+          data: newData,
+        },
+      ];
+    } catch (error) {
+      console.error("Error occured:", error);
+    }
+  } else {
+    chartOptions.value = initialChartOptions;
+    series.value = [];
+  }
+};
+
+// to allow parent component to use function addHFData
+defineExpose({
+  addHFData,
 });
 </script>
 
