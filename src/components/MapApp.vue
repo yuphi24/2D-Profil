@@ -1,45 +1,108 @@
 <script setup>
 // vue
-import { onMounted, markRaw, ref } from "vue";
+import { onMounted, markRaw, ref, watch } from "vue";
 
 // turf
-import * as turf from "@turf/turf";
+// import * as turf from "@turf/turf";
 
 // map viewer
 import { Map, Popup } from "maplibre-gl";
 
 // data
-import maps from "./left-panel/maps.json";
+import maps from "./left-panel/settings-panel/maps.json";
 import geojson from "@/assets/data/heatflow_sample_data.geojson";
+import schemaURL from "@/assets/data/api_schema.json";
 
 // store
 import { useMapControlsStore } from "@/store/mapControls";
-import { useanAlysisFunctionsStore } from "@/store/analysisFunctions";
+const mapControls = useMapControlsStore();
+const draw = mapControls.mapboxDraw;
+
+import { useAnalysisFunctionsStore } from "@/store/analysisFunctions";
+const analysisFunctions = useAnalysisFunctionsStore();
+const getPoint = analysisFunctions.getPointsWithin150km;
+
+import { useSelectPropatiesStore } from "@/store/selectPropaties";
+const selectPropaties = useSelectPropatiesStore();
+
+import { useMeasurementStore } from "@/store/measurements";
+const measurements = useMeasurementStore();
+measurements.fetchAPIDataSchema(schemaURL);
+measurements.geojson = geojson;
+measurements.isLoading = false;
 
 // component
-import LineChart from "./analysis/LineChart.vue";
+import { CButton, CButtonGroup, COffcanvas } from "@coreui/bootstrap-vue";
+import CursorCoordinates from "./map/CursorCoordinates.vue";
+import LeftPanel from "./left-panel/LeftPanel.vue";
+import HeatFlowChart from "./left-panel/analysis-panel/HeatFlowChart.vue";
+import MeasuredDepthChart from "./left-panel/analysis-panel/MeasuredDepthChart.vue";
+import HFUncertaintyChart from "./left-panel/analysis-panel/HFUncertaintyChart.vue";
 
 // to call function "addHFData from LineChart.vue"
-const lineChart = ref();
+const heatFlowChart = ref();
 const updateQChart = () => {
-  console.log("fonction 'addHFData' from LineChart.vue is called")
-  lineChart.value.addHFData();
+  console.log("fonction 'addHFData' from HeatFlowChart.vue is called");
+  heatFlowChart.value.addHFData();
 };
 
 const mapContainer = ref();
 const map = ref();
-const mapControls = useMapControlsStore();
-const draw = mapControls.mapboxDraw;
-const analysisFunctions = useanAlysisFunctionsStore();
-const getPoint = analysisFunctions.getPointsWithin150km;
-// const calculatedArea = ref("");
+const navbarTitles = ref(["Settings", "Filter", "Statistics", "Analysis"]);
+const defaultCircleColor = ref("#41b6c4");
+
+// for update Chart
+const displayedChartNr = ref(0);
+console.log("displayedChartNr below");
+console.log(displayedChartNr.value);
+watch(
+  () => selectPropaties.selectedChartComponent,
+  (newValue, oldValue) => {
+    console.log("newValue:", newValue, "oldValue:", oldValue);
+    console.log("selectedChartComponent below from MapApp.vue");
+    console.log(selectPropaties.selectedChartComponent);
+    if (newValue === "HeatFlowChart") {
+      displayedChartNr.value = 1;
+      console.log("displayedChartNr below");
+      console.log(displayedChartNr.value);
+    } else if (newValue === "MeasuredDepthChart") {
+      displayedChartNr.value = 2;
+      console.log("displayedChartNr below");
+      console.log(displayedChartNr.value);
+    } else if (newValue === "HFUncertaintyChart") {
+      displayedChartNr.value = 3;
+      console.log("displayedChartNr below");
+      console.log(displayedChartNr.value);
+    } else {
+      displayedChartNr.value = 0;
+      console.log("displayedChartNr below");
+      console.log(displayedChartNr.value);
+    }
+  }
+);
+const setIsClosed = () => (displayedChartNr.value = 0);
+
+/* changeChart(HeatFlowChart);
+const chart = ref(null)
+function changeChart (newChart) {
+  chart.value = markRaw(newChart)
+} */
+
+// for CButtonGroup
+const panelTitle = ref("");
+const isCollapsed = ref(true);
+const visibleScrolling = ref(false);
+const setIsCollapsed = () => (isCollapsed.value = !isCollapsed.value);
+function setPanelTitle(event) {
+  panelTitle.value = event.srcElement.innerHTML;
+}
+function toggleVisibleScrolling() {
+  visibleScrolling.value = !visibleScrolling.value;
+}
 
 // for basemaps
 const basemaps = ref(maps);
 const activeBaseLayer = ref("");
-
-const defaultCircleColor = ref("#41b6c4");
-
 function setBaseMapsSource(basemaps) {
   let bmSourceObject = {};
 
@@ -55,7 +118,6 @@ function setBaseMapsSource(basemaps) {
   });
   return bmSourceObject;
 }
-
 function setBaseMapsLayer(basemaps) {
   let layerObjects = [];
 
@@ -142,11 +204,6 @@ onMounted(() => {
     // scale
     map.value.addControl(mapControls.scale);
 
-    // flächen berechnen as turf test
-    // map.value.on("draw.create", updateArea);
-    // map.value.on("draw.delete", updateArea);
-    // map.value.on("draw.update", updateArea);
-
     // get points within 150km of line
     map.value.on("draw.create", getPoint);
     map.value.on("draw.update", getPoint);
@@ -162,7 +219,57 @@ onMounted(() => {
 <template>
   <div class="map-wrap">
     <div class="map" ref="mapContainer" @mousemove="updateLatLng"></div>
-    <LineChart ref="lineChart" />
+    <HeatFlowChart
+      ref="heatFlowChart" 
+      v-if="displayedChartNr === 1" 
+      @close-event="setIsClosed()"
+    />
+    <MeasuredDepthChart v-if="displayedChartNr === 2" />
+    <HFUncertaintyChart v-if="displayedChartNr === 3" />
+    <!-- Navigation buttons -->
+    <div class="fixed-bottom">
+      <CButtonGroup role="group" aria-label="Basic example">
+        <CButton
+          color="primary"
+          v-for="title in navbarTitles"
+          :key="title"
+          @click="
+            isCollapsed ? setPanelTitle($event) : 0,
+              setIsCollapsed(),
+              toggleVisibleScrolling()
+          "
+          type="button"
+          class="btn btn-primary"
+        >
+          {{ title }}
+        </CButton>
+      </CButtonGroup>
+
+      <COffcanvas
+        :backdrop="false"
+        placement="start"
+        scroll
+        :visible="visibleScrolling"
+        @hide="
+          () => {
+            visibleScrolling = !visibleScrolling;
+          }
+        "
+      >
+        <LeftPanel
+          :title="panelTitle"
+          :map="map"
+          :activeBaseLayer="activeBaseLayer"
+          :heatFlowSchema="heatFlowSchema"
+          @collapse-event="setIsCollapsed()"
+          @toggle-event="toggleVisibleScrolling()"
+        />
+      </COffcanvas>
+
+      <div class="cursor-div">
+        <CursorCoordinates :map="map" />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -182,14 +289,12 @@ onMounted(() => {
   height: 100%;
 }
 
-p {
-  font-family: "Open Sans";
-  margin: 0;
-  font-size: 13px;
-}
-
-.calculated-area {
-  padding-top: 3px;
+.fixed-bottom {
+  position: absolute;
+  width: fit-content;
+  height: fit-content;
+  margin: 0 auto;
+  z-index: 1;
 }
 
 .maplibregl-popup {

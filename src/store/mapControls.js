@@ -28,7 +28,5 @@ export const useMapControlsStore = defineStore("mapControls", () => {
   const fullscreen = ref(new FullscreenControl());
   const navigation = ref(new NavigationControl());
 
-  
-
   return { mapboxDraw, scale, fullscreen, navigation };
 });

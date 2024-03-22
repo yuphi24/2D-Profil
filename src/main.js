@@ -12,6 +12,6 @@ import { createPinia } from "pinia";
 
 const app = createApp(App).use(createPinia());
 
-app.use(VueApexCharts);
-
-app.mount(document.getElementsByClassName("whfd-mapping")[0]);
+app
+  .use(VueApexCharts)
+  .mount(document.getElementsByClassName("whfd-mapping")[0]);
