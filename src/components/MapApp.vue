@@ -1,6 +1,6 @@
 <script setup>
 // vue
-import { onMounted, markRaw, ref, watch } from "vue";
+import { onMounted, markRaw, ref, watch, computed } from "vue";
 
 // turf
 // import * as turf from "@turf/turf";
@@ -41,51 +41,138 @@ import HFUncertaintyChart from "./left-panel/analysis-panel/HFUncertaintyChart.v
 
 // to call function "addHFData from LineChart.vue"
 const heatFlowChart = ref();
+const heatFlowUChart = ref();
+const measuredDepthChart = ref();
 const updateQChart = () => {
   console.log("fonction 'addHFData' from HeatFlowChart.vue is called");
   heatFlowChart.value.addHFData();
+};
+const updateDepthChart = () => {
+  console.log("fonction 'addMDData' from MeasuredDepthChart.vue is called");
+  measuredDepthChart.value.addMDData();
+};
+const updateQCChart = () => {
+  console.log("fonction 'addHFUData' from HFUncertaintyChart.vue is called");
+  heatFlowUChart.value.addHFUData();
 };
 
 const mapContainer = ref();
 const map = ref();
 const navbarTitles = ref(["Settings", "Filter", "Statistics", "Analysis"]);
-const defaultCircleColor = ref("#41b6c4");
 
 // for update Chart
 const displayedChartNr = ref(0);
-console.log("displayedChartNr below");
-console.log(displayedChartNr.value);
+console.log("displayedChartNr", displayedChartNr.value);
 watch(
   () => selectPropaties.selectedChartComponent,
   (newValue, oldValue) => {
     console.log("newValue:", newValue, "oldValue:", oldValue);
-    console.log("selectedChartComponent below from MapApp.vue");
-    console.log(selectPropaties.selectedChartComponent);
+    console.log("selectedChartComponent from MapApp.vue:", selectPropaties.selectedChartComponent);
     if (newValue === "HeatFlowChart") {
       displayedChartNr.value = 1;
-      console.log("displayedChartNr below");
-      console.log(displayedChartNr.value);
+      console.log("displayedChartNr", displayedChartNr.value);
     } else if (newValue === "MeasuredDepthChart") {
       displayedChartNr.value = 2;
-      console.log("displayedChartNr below");
-      console.log(displayedChartNr.value);
+      console.log("displayedChartNr", displayedChartNr.value);
     } else if (newValue === "HFUncertaintyChart") {
       displayedChartNr.value = 3;
-      console.log("displayedChartNr below");
-      console.log(displayedChartNr.value);
+      console.log("displayedChartNr", displayedChartNr.value);
     } else {
       displayedChartNr.value = 0;
-      console.log("displayedChartNr below");
-      console.log(displayedChartNr.value);
+      console.log("displayedChartNr", displayedChartNr.value);
     }
   }
 );
 const setIsClosed = () => (displayedChartNr.value = 0);
 
-/* changeChart(HeatFlowChart);
-const chart = ref(null)
-function changeChart (newChart) {
-  chart.value = markRaw(newChart)
+// avoid to get points data by drawing line, if it's not 2d profil modus
+watch(displayedChartNr, currentDisplayChartNr => {
+  console.log("currentDisplayChartNr",currentDisplayChartNr);
+  if(currentDisplayChartNr === 1) {
+    // get points within 150km of line
+    map.value.on("draw.create", getPoint);
+    map.value.on("draw.update", getPoint);
+    // draw line chart of q-value
+    map.value.on("draw.create", updateQChart);
+    map.value.on("draw.delete", updateQChart);
+    map.value.on("draw.update", updateQChart);
+    map.value.off("draw.create", updateDepthChart);
+    map.value.off("draw.delete", updateDepthChart);
+    map.value.off("draw.update", updateDepthChart);
+    map.value.off("draw.create", updateQCChart);
+    map.value.off("draw.delete", updateQCChart);
+    map.value.off("draw.update", updateQCChart);
+  } else if (currentDisplayChartNr === 2) {
+    // get points within 150km of line
+    map.value.on("draw.create", getPoint);
+    map.value.on("draw.update", getPoint);
+    map.value.on("draw.create", updateDepthChart);
+    map.value.on("draw.delete", updateDepthChart);
+    map.value.on("draw.update", updateDepthChart);
+    map.value.off("draw.create", updateQChart);
+    map.value.off("draw.delete", updateQChart);
+    map.value.off("draw.update", updateQChart);
+    map.value.off("draw.create", updateQCChart);
+    map.value.off("draw.delete", updateQCChart);
+    map.value.off("draw.update", updateQCChart);
+  } else if (currentDisplayChartNr === 3) {
+    // get points within 150km of line
+    map.value.on("draw.create", getPoint);
+    map.value.on("draw.update", getPoint);
+    map.value.on("draw.create", updateQCChart);
+    map.value.on("draw.delete", updateQCChart);
+    map.value.on("draw.update", updateQCChart);
+    map.value.off("draw.create", updateDepthChart);
+    map.value.off("draw.delete", updateDepthChart);
+    map.value.off("draw.update", updateDepthChart);
+  } else {
+    map.value.off("draw.create", getPoint);
+    map.value.off("draw.update", getPoint);
+    map.value.off("draw.create", updateQChart);
+    map.value.off("draw.delete", updateQChart);
+    map.value.off("draw.update", updateQChart);
+    map.value.off("draw.create", updateDepthChart);
+    map.value.off("draw.delete", updateDepthChart);
+    map.value.off("draw.update", updateDepthChart);
+    map.value.off("draw.create", updateQCChart);
+    map.value.off("draw.delete", updateQCChart);
+    map.value.off("draw.update", updateQCChart);
+  }
+});
+
+// Color setting
+const defaultCircleColor = ref("#41b6c4");
+const newCircleColor = ref("#fa9b1e");
+
+watch(
+  () => analysisFunctions.pointsWithin150km,
+  (newPoints, oldPoints) => {
+    console.log("points color will be changed");
+    console.log("new:", newPoints, "old:", oldPoints);
+    // Color of new points
+    newPoints.forEach(point => {
+      changePointColor(newCircleColor.value, point.id);
+    });
+  }, { deep: true }
+);
+
+function changePointColor(color, pointId) {
+  console.log("pointId", pointId);
+  map.value.setPaintProperty("sites", "circle-color", color);
+};
+
+/* function changePointColor(color, pointId) {
+  const pointId = geojson.features.findIndex(feature => {
+    return feature.geometry.coordinates[0] === coordinates[0] &&
+           feature.geometry.coordinates[1] === coordinates[1];
+  });
+  
+  // if any elements are found (pointId = 1 -> no element found)
+  if (pointId !== -1) {
+    map.value.setPaintProperty("sites", "circle-color", color, {
+      filter: ['==', 'id', pointId]
+    });
+  }
 } */
 
 // for CButtonGroup
@@ -203,15 +290,6 @@ onMounted(() => {
 
     // scale
     map.value.addControl(mapControls.scale);
-
-    // get points within 150km of line
-    map.value.on("draw.create", getPoint);
-    map.value.on("draw.update", getPoint);
-
-    // draw line chart of q-value
-    map.value.on("draw.create", updateQChart);
-    map.value.on("draw.delete", updateQChart);
-    map.value.on("draw.update", updateQChart);
   });
 });
 </script>
@@ -224,8 +302,17 @@ onMounted(() => {
       v-if="displayedChartNr === 1" 
       @close-event="setIsClosed()"
     />
-    <MeasuredDepthChart v-if="displayedChartNr === 2" />
-    <HFUncertaintyChart v-if="displayedChartNr === 3" />
+    <MeasuredDepthChart
+      ref="measuredDepthChart"
+      v-if="displayedChartNr === 2"
+      @close-event="setIsClosed()"
+    />
+    <HFUncertaintyChart
+      ref="heatFlowUChart"
+      v-if="displayedChartNr === 3"
+      @close-event="setIsClosed()"
+    />
+
     <!-- Navigation buttons -->
     <div class="fixed-bottom">
       <CButtonGroup role="group" aria-label="Basic example">

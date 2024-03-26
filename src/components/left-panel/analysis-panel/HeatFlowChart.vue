@@ -106,8 +106,8 @@ const addHFData = async () => {
   if (data.features.length > 0) {
     try {
       const points = analysisFunctions.pointsWithin150km;
-      console.log("points data below");
-      console.log(points);
+      console.log("points data within 150km", points);
+      
       const newData = points.map((item) => ({
         x: item.geometry.coordinates[0],
         y: item.properties.q,
@@ -115,8 +115,7 @@ const addHFData = async () => {
       }));
 
       newData.sort((a, b) => a.x - b.x);
-      console.log("newData below");
-      console.log(newData);
+      console.log("newData", newData);
 
       chartOptions.value = {
         ...chartOptions.value,
@@ -125,14 +124,14 @@ const addHFData = async () => {
         },
       };
 
-      console.log(chartOptions.value.xaxis);
+      console.log("chartOptions.value.xaxis", chartOptions.value.xaxis);
 
       series.value = [
         {
           data: newData,
         },
       ];
-      console.log(series.value);
+      console.log("series.value", series.value);
     } catch (error) {
       console.error("Error occured:", error);
     }

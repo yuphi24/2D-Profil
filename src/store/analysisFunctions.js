@@ -6,7 +6,7 @@ import geojson from "@/assets/data/heatflow_sample_data.geojson";
 export const useAnalysisFunctionsStore = defineStore(
   "analysisFunctions",
   () => {
-    let pointsWithin150km = ref([]);
+    const pointsWithin150km = ref([]);
 
     function getPointsWithin150km(event) {
       const lineCoordinates = event.features[0].geometry.coordinates;
