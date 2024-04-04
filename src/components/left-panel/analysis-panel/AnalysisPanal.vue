@@ -8,6 +8,7 @@ const selectPropaties = useSelectPropatiesStore();
 const updateChart = selectPropaties.updateChart;
 
 const measurements = useMeasurementStore();
+
 // const selectPropaties = useSelectPropatiesStore();
 // const updateChart = selectPropaties.updateChart;
 
@@ -47,7 +48,7 @@ console.log(measurements.dataSchema);
     <div class="card card-body">
       <multiselect
         v-model="selectPropaties.selectedProperty"
-        :options="measurements.selectableProperties"
+        :options="measurements.selectableNumberProperties"
         label="title"
         placeholder="Selct Property"
         :allow-empty="false"

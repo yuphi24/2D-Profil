@@ -36,8 +36,9 @@ import { CButton, CButtonGroup, COffcanvas } from "@coreui/bootstrap-vue";
 import CursorCoordinates from "./map/CursorCoordinates.vue";
 import LeftPanel from "./left-panel/LeftPanel.vue";
 import HeatFlowChart from "./left-panel/analysis-panel/HeatFlowChart.vue";
-import MeasuredDepthChart from "./left-panel/analysis-panel/MeasuredDepthChart.vue";
 import HFUncertaintyChart from "./left-panel/analysis-panel/HFUncertaintyChart.vue";
+import MeasuredDepthChart from "./left-panel/analysis-panel/MeasuredDepthChart.vue";
+import TrueVerticalDepthChart from "./left-panel/analysis-panel/TrueVerticalDepthChart.vue";
 
 // to call function "addHFData from LineChart.vue"
 const heatFlowChart = ref();
@@ -71,11 +72,14 @@ watch(
     if (newValue === "HeatFlowChart") {
       displayedChartNr.value = 1;
       console.log("displayedChartNr", displayedChartNr.value);
-    } else if (newValue === "MeasuredDepthChart") {
+    } else if (newValue === "HFUncertaintyChart") {
       displayedChartNr.value = 2;
       console.log("displayedChartNr", displayedChartNr.value);
-    } else if (newValue === "HFUncertaintyChart") {
+    } else if (newValue === "MeasuredDepthChart") {
       displayedChartNr.value = 3;
+      console.log("displayedChartNr", displayedChartNr.value);
+    } else if (newValue === "TrueVerticalDepthChart") {
+      displayedChartNr.value = 4;
       console.log("displayedChartNr", displayedChartNr.value);
     } else {
       displayedChartNr.value = 0;
@@ -160,7 +164,7 @@ function changePointColor(color, pointId) {
   console.log("pointId", pointId);
   map.value.setPaintProperty("sites", "circle-color", color);
 };
-
+//     filter: ['==', 'id', pointId]
 /* function changePointColor(color, pointId) {
   const pointId = geojson.features.findIndex(feature => {
     return feature.geometry.coordinates[0] === coordinates[0] &&
@@ -302,14 +306,19 @@ onMounted(() => {
       v-if="displayedChartNr === 1" 
       @close-event="setIsClosed()"
     />
-    <MeasuredDepthChart
-      ref="measuredDepthChart"
+    <HFUncertaintyChart
+      ref="heatFlowUChart"
       v-if="displayedChartNr === 2"
       @close-event="setIsClosed()"
     />
-    <HFUncertaintyChart
-      ref="heatFlowUChart"
+    <MeasuredDepthChart
+      ref="measuredDepthChart"
       v-if="displayedChartNr === 3"
+      @close-event="setIsClosed()"
+    />
+    <TrueVerticalDepthChart
+      ref="trueVerticalDepthChart"
+      v-if="displayedChartNr === 4"
       @close-event="setIsClosed()"
     />
 

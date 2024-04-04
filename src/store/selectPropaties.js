@@ -14,13 +14,18 @@ export const useSelectPropatiesStore = defineStore("selectPropaties", () => {
       console.log("selectedChartComponent below");
       console.log(selectedChartComponent.value);
       return selectedChartComponent.value;
+    } else if (selectedProperty.value.key === "q_uncertainty") {
+      selectedChartComponent.value = "HFUncertaintyChart";
+      console.log("selectedChartComponent below");
+      console.log(selectedChartComponent.value);
+      return selectedChartComponent.value;
     } else if (selectedProperty.value.key === "total_depth_MD") {
       selectedChartComponent.value = "MeasuredDepthChart";
       console.log("selectedChartComponent below");
       console.log(selectedChartComponent.value);
       return selectedChartComponent.value;
-    } else if (selectedProperty.value.key === "q_uncertainty") {
-      selectedChartComponent.value = "HFUncertaintyChart";
+    } else if (selectedProperty.value.key === "total_depth_TVD") {
+      selectedChartComponent.value = "TrueVerticalDepthChart";
       console.log("selectedChartComponent below");
       console.log(selectedChartComponent.value);
       return selectedChartComponent.value;
