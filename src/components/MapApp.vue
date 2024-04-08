@@ -98,7 +98,7 @@ watch(displayedChartNr, currentDisplayChartNr => {
     map.value.on("draw.update", getPoint);
     // draw line chart of q-value
     map.value.on("draw.create", updateQChart);
-    map.value.on("draw.delete", updateQChart);
+    map.value.on("draw.delete", updateQChart, backPointColor);
     map.value.on("draw.update", updateQChart);
     map.value.off("draw.create", updateDepthChart);
     map.value.off("draw.delete", updateDepthChart);
@@ -153,31 +153,25 @@ watch(
   (newPoints, oldPoints) => {
     console.log("points color will be changed");
     console.log("new:", newPoints, "old:", oldPoints);
-    // Color of new points
-    newPoints.forEach(point => {
-      changePointColor(newCircleColor.value, point.id);
-    });
+
+    const newPointIds = newPoints.map(point => point.id);
+    console.log("newPointIds", newPointIds);
+    changeNewPointColor(newCircleColor.value, newPointIds);
+
+    const oldPointIds = oldPoints.map(point => point.id);
+    console.log("oldPointIds", oldPointIds);
   }, { deep: true }
 );
 
-function changePointColor(color, pointId) {
-  console.log("pointId", pointId);
-  map.value.setPaintProperty("sites", "circle-color", color);
+function changeNewPointColor(color, pointIds) {
+  console.log("pointId", pointIds);
+  console.log("color", color);
+  map.value.setPaintProperty("sites", "circle-color", ["match", ["get", "id"], pointIds, color, defaultCircleColor.value]);
 };
-//     filter: ['==', 'id', pointId]
-/* function changePointColor(color, pointId) {
-  const pointId = geojson.features.findIndex(feature => {
-    return feature.geometry.coordinates[0] === coordinates[0] &&
-           feature.geometry.coordinates[1] === coordinates[1];
-  });
-  
-  // if any elements are found (pointId = 1 -> no element found)
-  if (pointId !== -1) {
-    map.value.setPaintProperty("sites", "circle-color", color, {
-      filter: ['==', 'id', pointId]
-    });
-  }
-} */
+
+function backPointColor() {
+  map.value.setPaintProperty("sites", "circle-color", defaultCircleColor.value);
+};
 
 // for CButtonGroup
 const panelTitle = ref("");
