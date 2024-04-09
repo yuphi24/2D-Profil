@@ -93,18 +93,25 @@ const setIsClosed = () => (displayedChartNr.value = 0);
 watch(displayedChartNr, currentDisplayChartNr => {
   console.log("currentDisplayChartNr",currentDisplayChartNr);
   if(currentDisplayChartNr === 1) {
-    // get points within 150km of line
-    map.value.on("draw.create", getPoint);
-    map.value.on("draw.update", getPoint);
-    // draw line chart of q-value
-    map.value.on("draw.create", updateQChart);
-    map.value.on("draw.delete", updateQChart, backPointColor);
-    map.value.on("draw.update", updateQChart);
+    map.value.on("draw.create", function (e) {
+      getPoint(e);
+      updateQChart(e);
+    });
+    map.value.on("draw.update", function (e) {
+      getPoint(e);
+      updateQChart(e);
+    });
+    map.value.on('draw.delete', function (e) {
+      updateQChart(e);
+      backPointColor(e);
+    });
     map.value.off("draw.create", updateDepthChart);
-    map.value.off("draw.delete", updateDepthChart);
+    map.value.off("draw.delete", function (e) {
+      updateDepthChart(e);
+      updateQCChart(e);
+    });
     map.value.off("draw.update", updateDepthChart);
     map.value.off("draw.create", updateQCChart);
-    map.value.off("draw.delete", updateQCChart);
     map.value.off("draw.update", updateQCChart);
   } else if (currentDisplayChartNr === 2) {
     // get points within 150km of line
@@ -170,6 +177,7 @@ function changeNewPointColor(color, pointIds) {
 };
 
 function backPointColor() {
+  console.log("backPointColor is called");
   map.value.setPaintProperty("sites", "circle-color", defaultCircleColor.value);
 };
 
