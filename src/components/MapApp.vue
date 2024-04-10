@@ -322,6 +322,7 @@ onMounted(() => {
       ref="heatFlowChart" 
       v-if="displayedChartNr === 1" 
       @close-event="setIsClosed()"
+      :map="map"
     />
     <HFUncertaintyChart
       ref="heatFlowUChart"

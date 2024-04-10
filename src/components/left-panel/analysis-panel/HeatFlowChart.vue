@@ -1,9 +1,11 @@
 <script setup>
-import { ref, computed, defineExpose, defineEmits } from "vue";
+import { ref, watch, defineExpose, defineEmits, defineProps } from "vue";
 import VueApexCharts from "vue3-apexcharts";
 import { useMapControlsStore } from "@/store/mapControls";
 import { useAnalysisFunctionsStore } from "@/store/analysisFunctions";
 import { CRow, CCard, CCardHeader, CCloseButton } from "@coreui/bootstrap-vue";
+
+const props = defineProps({ map: Map });
 
 const apexchart = VueApexCharts;
 const mapControls = useMapControlsStore();
@@ -112,6 +114,62 @@ const addHFData = async () => {
       const coordinateA = line.geometry.coordinates[1];
       const coordinateB = line.geometry.coordinates[0];
       console.log("A:", coordinateA, "B:", coordinateB);
+
+      const pointData = {
+        'type': 'FeatureCollection',
+        'features': [
+          {
+            'type': 'Feature',
+            'geometry': {
+              'type': 'Point',
+              'coordinates': coordinateA
+            },
+            'properties': {'marker-symbol': 'A'}
+          },
+          {
+            'type': 'Feature',
+            'geometry': {
+              'type': 'Point',
+              'coordinates': coordinateB
+            },
+            'properties': {'marker-symbol': 'B'}
+          }
+        ]
+      };
+
+      function addPoints() {
+        props.map.addSource('points', {
+          'type': 'geojson',
+          'data': pointData
+        });
+
+        // ポイントのレイヤーを追加
+        props.map.addLayer({
+          'id': "points",
+          'type': "circle",
+          'source': "points",
+          paint: {
+            "circle-color": "#fa9b1e",
+            "circle-radius": 4,
+            "circle-stroke-width": 0.5,
+            "circle-stroke-color": "#fa9b1e",
+          },
+          layout: {
+            visibility: "visible",
+          },
+        });
+      };
+      
+      addPoints();
+
+      function updatePoints() {
+        props.map.remove(); 
+        addPoints();
+      };
+
+      watch([coordinateA, coordinateB], () => {
+        updatePoints();
+      });
       
       let newData = points.map((item) => ({
         p: item.geometry.coordinates,
