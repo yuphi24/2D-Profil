@@ -106,16 +106,67 @@ const addHFData = async () => {
   if (data.features.length > 0) {
     try {
       const points = analysisFunctions.pointsWithin150km;
+      const line = analysisFunctions.line;
       console.log("points data within 150km", points);
+
+      const coordinateA = line.geometry.coordinates[1];
+      const coordinateB = line.geometry.coordinates[0];
+      console.log("A:", coordinateA, "B:", coordinateB);
       
-      const newData = points.map((item) => ({
+      let newData = points.map((item) => ({
+        p: item.geometry.coordinates,
         x: item.geometry.coordinates[0],
         y: item.properties.q,
         id: item.properties.id,
       }));
 
+      const newCoordinateA = [0, 0];
+
+      let newCoordinateB = [
+        coordinateB[0] - coordinateA[0],
+        coordinateB[1] - coordinateA[1]
+      ];
+
+      newData = newData.map(item => ({
+        p: [
+          item.p[0] - coordinateA[0],
+          item.p[1] - coordinateA[1]
+        ],
+        x: item.x - coordinateA[0],
+        y: item.y,
+        id: item.id
+      }));
+
+      newData = newData.map(item => ({
+        h: [
+          (newCoordinateB[0] * item.p[0] + newCoordinateB[1] * item.p[1]) / (Math.pow(newCoordinateB[0], 2) + Math.pow(newCoordinateB[1], 2)) * newCoordinateB[0],
+          (newCoordinateB[0] * item.p[0] + newCoordinateB[1] * item.p[1]) / (Math.pow(newCoordinateB[0], 2) + Math.pow(newCoordinateB[1], 2)) * newCoordinateB[1]
+        ],
+        p: item.p,
+        x: item.x,
+        y: item.y,
+        id: item.id
+      }));
+      console.log("newA:", newCoordinateA, "newB:", newCoordinateB, "newData:", newData);
+
+      newCoordinateB = [
+        Math.sqrt(Math.pow(newCoordinateB[0], 2) + Math.pow(newCoordinateB[1], 2)),
+        0
+      ];
+
+      newData = newData.map(item => ({
+        h: [
+          Math.sqrt(Math.pow(item.h[0], 2) + Math.pow(item.h[1], 2)),
+          0
+        ],
+        p: item.p,
+        x: item.x,
+        y: item.y,
+        id: item.id
+      }));
+      console.log("final Data", "newA:", newCoordinateA, "newB:", newCoordinateB, "newData:", newData);
+
       newData.sort((a, b) => a.x - b.x);
-      console.log("newData", newData);
 
       chartOptions.value = {
         ...chartOptions.value,

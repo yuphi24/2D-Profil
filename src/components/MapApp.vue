@@ -63,7 +63,7 @@ const navbarTitles = ref(["Settings", "Filter", "Statistics", "Analysis"]);
 
 // for update Chart
 const displayedChartNr = ref(0);
-console.log("displayedChartNr", displayedChartNr.value);
+console.log("displayedChartNr:", displayedChartNr.value);
 watch(
   () => selectPropaties.selectedChartComponent,
   (newValue, oldValue) => {
@@ -91,63 +91,78 @@ const setIsClosed = () => (displayedChartNr.value = 0);
 
 // avoid to get points data by drawing line, if it's not 2d profil modus
 watch(displayedChartNr, currentDisplayChartNr => {
-  console.log("currentDisplayChartNr",currentDisplayChartNr);
+  console.log("currentDisplayChartNr:",currentDisplayChartNr);
+  const drawEvents = ["draw.create", "draw.update", "draw.delete"]
+  const createUpdateEvents = ["draw.create", "draw.update"];
+  const deleteEvent = "draw.delete";
+
   if(currentDisplayChartNr === 1) {
-    map.value.on("draw.create", function (e) {
-      getPoint(e);
-      updateQChart(e);
+    // Heat Flow
+    createUpdateEvents.forEach(event => {
+      map.value.on(event, function (e) {
+        getPoint(e);
+        updateQChart(e);
+      });
     });
-    map.value.on("draw.update", function (e) {
-      getPoint(e);
-      updateQChart(e);
-    });
-    map.value.on('draw.delete', function (e) {
+    map.value.on(deleteEvent, function (e) {
       updateQChart(e);
       backPointColor(e);
     });
-    map.value.off("draw.create", updateDepthChart);
-    map.value.off("draw.delete", function (e) {
-      updateDepthChart(e);
-      updateQCChart(e);
+    drawEvents.forEach(event => {
+      map.value.off(event, function (e) {
+        updateDepthChart(e);
+        updateQCChart(e);
+      });
     });
-    map.value.off("draw.update", updateDepthChart);
-    map.value.off("draw.create", updateQCChart);
-    map.value.off("draw.update", updateQCChart);
   } else if (currentDisplayChartNr === 2) {
-    // get points within 150km of line
-    map.value.on("draw.create", getPoint);
-    map.value.on("draw.update", getPoint);
-    map.value.on("draw.create", updateDepthChart);
-    map.value.on("draw.delete", updateDepthChart);
-    map.value.on("draw.update", updateDepthChart);
-    map.value.off("draw.create", updateQChart);
-    map.value.off("draw.delete", updateQChart);
-    map.value.off("draw.update", updateQChart);
-    map.value.off("draw.create", updateQCChart);
-    map.value.off("draw.delete", updateQCChart);
-    map.value.off("draw.update", updateQCChart);
+    // Heat Flow Uncertainty
+    createUpdateEvents.forEach(event => {
+      map.value.on(event, function (e) {
+        getPoint(e);
+        updateQCChart(e);
+      });
+    });
+    map.value.on(deleteEvent, function (e) {
+      updateQCChart(e);
+      backPointColor(e);
+    });
+    drawEvents.forEach(event => {
+      map.value.off(event, function (e) {
+        updateQChart(e);
+        updateDepthChart(e);
+      });
+    });
   } else if (currentDisplayChartNr === 3) {
-    // get points within 150km of line
-    map.value.on("draw.create", getPoint);
-    map.value.on("draw.update", getPoint);
-    map.value.on("draw.create", updateQCChart);
-    map.value.on("draw.delete", updateQCChart);
-    map.value.on("draw.update", updateQCChart);
-    map.value.off("draw.create", updateDepthChart);
-    map.value.off("draw.delete", updateDepthChart);
-    map.value.off("draw.update", updateDepthChart);
+    // Total Measured Depth
+    createUpdateEvents.forEach(event => {
+      map.value.on(event, function (e) {
+        getPoint(e);
+        updateDepthChart(e);
+      });
+    });
+    map.value.on(deleteEvent, function (e) {
+      updateDepthChart(e);
+      backPointColor(e);
+    });
+    drawEvents.forEach(event => {
+      map.value.off(event, function (e) {
+        updateQChart(e);
+        updateQCChart(e);
+      });
+    });
   } else {
-    map.value.off("draw.create", getPoint);
-    map.value.off("draw.update", getPoint);
-    map.value.off("draw.create", updateQChart);
-    map.value.off("draw.delete", updateQChart);
-    map.value.off("draw.update", updateQChart);
-    map.value.off("draw.create", updateDepthChart);
-    map.value.off("draw.delete", updateDepthChart);
-    map.value.off("draw.update", updateDepthChart);
-    map.value.off("draw.create", updateQCChart);
-    map.value.off("draw.delete", updateQCChart);
-    map.value.off("draw.update", updateQCChart);
+    createUpdateEvents.forEach(event => {
+      map.value.off(event, function (e) {
+        getPoint(e);
+      });
+    });
+    drawEvents.forEach(event => {
+      map.value.off(event, function (e) {
+        updateQChart(e);
+        updateQCChart(e);
+        updateDepthChart(e);
+      });
+    });
   }
 });
 
@@ -171,8 +186,8 @@ watch(
 );
 
 function changeNewPointColor(color, pointIds) {
-  console.log("pointId", pointIds);
-  console.log("color", color);
+  console.log("pointId:", pointIds);
+  console.log("color:", color);
   map.value.setPaintProperty("sites", "circle-color", ["match", ["get", "id"], pointIds, color, defaultCircleColor.value]);
 };
 
