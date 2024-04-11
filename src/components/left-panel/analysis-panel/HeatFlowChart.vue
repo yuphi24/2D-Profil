@@ -89,12 +89,12 @@ const initialChartOptions = {
   xaxis: {
     type: "numeric",
     title: {
-      text: "longitude",
+      text: "Distance",
     },
   },
   yaxis: {
     title: {
-      text: "heat flow value (q)",
+      text: "Heat-Flow Value (q)",
     },
   },
 };
@@ -111,129 +111,138 @@ const addHFData = async () => {
       const line = analysisFunctions.line;
       console.log("points data within 150km", points);
 
+    // draw Point A & B
       const coordinateA = line.geometry.coordinates[1];
       const coordinateB = line.geometry.coordinates[0];
       console.log("A:", coordinateA, "B:", coordinateB);
 
-      const pointData = {
-        'type': 'FeatureCollection',
-        'features': [
-          {
-            'type': 'Feature',
-            'geometry': {
-              'type': 'Point',
-              'coordinates': coordinateA
-            },
-            'properties': {'marker-symbol': 'A'}
-          },
-          {
-            'type': 'Feature',
-            'geometry': {
-              'type': 'Point',
-              'coordinates': coordinateB
-            },
-            'properties': {'marker-symbol': 'B'}
-          }
-        ]
-      };
-
       function addPoints() {
-        props.map.addSource('points', {
+        // 既存の pointAB ソースとレイヤーを削除
+        if (props.map.getSource('pointAB')) {
+          props.map.removeSource('pointAB');
+          props.map.removeLayer('pointAB');
+        }
+
+        const pointAB = {
+          'type': 'FeatureCollection',
+          'features': [
+            {
+              'type': 'Feature',
+              'geometry': {
+                'type': 'Point',
+                'coordinates': coordinateA
+              },
+              'properties': {'marker-symbol': 'A'}
+            },
+            {
+              'type': 'Feature',
+              'geometry': {
+                'type': 'Point',
+                'coordinates': coordinateB
+              },
+              'properties': {'marker-symbol': 'B'}
+            }
+          ]
+        };
+
+        props.map.addSource("pointAB", {
           'type': 'geojson',
-          'data': pointData
+          'data': pointAB
         });
 
-        // ポイントのレイヤーを追加
         props.map.addLayer({
-          'id': "points",
-          'type': "circle",
-          'source': "points",
-          paint: {
-            "circle-color": "#fa9b1e",
-            "circle-radius": 4,
-            "circle-stroke-width": 0.5,
-            "circle-stroke-color": "#fa9b1e",
-          },
+          'id': "pointAB",
+          'type': "symbol",
+          'source': "pointAB",
           layout: {
-            visibility: "visible",
-          },
+            'text-field': ['get', 'marker-symbol'],
+            'text-offset': [0, 1.0],
+          }
         });
-      };
-      
-      addPoints();
-
-      function updatePoints() {
-        props.map.remove(); 
-        addPoints();
       };
 
       watch([coordinateA, coordinateB], () => {
-        updatePoints();
+        addPoints();
       });
-      
-      let newData = points.map((item) => ({
-        p: item.geometry.coordinates,
-        x: item.geometry.coordinates[0],
-        y: item.properties.q,
+
+    // Coordinates transformation 1
+      const latA = coordinateA[1];
+      const lonA = coordinateA[0];
+
+      const latB = coordinateB[1];
+      const lonB = coordinateB[0];
+
+      const pointsData = points.map((item) => ({
         id: item.properties.id,
+        y: item.properties.q,
+        lat: item.geometry.coordinates[1], 
+        lon: item.geometry.coordinates[0],
       }));
 
-      const newCoordinateA = [0, 0];
+      console.log("latA & lonA:", latA, lonA, "latB & lonB:", latB, lonB, "pointsData:", pointsData);
 
-      let newCoordinateB = [
-        coordinateB[0] - coordinateA[0],
-        coordinateB[1] - coordinateA[1]
-      ];
+      // Distance to Point A
+      pointsData.forEach((point) => {
+        const distanceToA = Distance(latA, lonA, point.lat, point.lon, 'K');
+        point.x = distanceToA;
+        console.log(`Distance from point id ${point.id} to point A: ${distanceToA} km`);
+      });
+      const distanceBtoA = Distance(latA, lonA, latB, lonB, 'K');
+      console.log(`Distance from point B to point A: ${distanceBtoA} km`);
 
-      newData = newData.map(item => ({
-        p: [
-          item.p[0] - coordinateA[0],
-          item.p[1] - coordinateA[1]
-        ],
-        x: item.x - coordinateA[0],
-        y: item.y,
-        id: item.id
-      }));
+      // Haversine formula
+      function Distance(lat1, lon1, lat2, lon2, unit) {
+        if ((lat1 == lat2) && (lon1 == lon2)) {
+          return 0;
+        }
+        else {
+          var radlat1 = Math.PI * lat1/180;
+          var radlat2 = Math.PI * lat2/180;
+          var theta = lon1-lon2;
+          var radtheta = Math.PI * theta/180;
+          var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+          if (dist > 1) {
+            dist = 1;
+          }
+          dist = Math.acos(dist);
+          dist = dist * 180/Math.PI;
+          dist = dist * 60 * 1.1515;
+          if (unit=="K") { dist = dist * 1.609344 }
+          if (unit=="N") { dist = dist * 0.8684 }
+          return dist;
+        }
+      };
 
-      newData = newData.map(item => ({
-        h: [
-          (newCoordinateB[0] * item.p[0] + newCoordinateB[1] * item.p[1]) / (Math.pow(newCoordinateB[0], 2) + Math.pow(newCoordinateB[1], 2)) * newCoordinateB[0],
-          (newCoordinateB[0] * item.p[0] + newCoordinateB[1] * item.p[1]) / (Math.pow(newCoordinateB[0], 2) + Math.pow(newCoordinateB[1], 2)) * newCoordinateB[1]
-        ],
-        p: item.p,
-        x: item.x,
-        y: item.y,
-        id: item.id
-      }));
-      console.log("newA:", newCoordinateA, "newB:", newCoordinateB, "newData:", newData);
+      const pointAData = {
+        id: 'pointA',
+        x: 0,
+        y: 0,
+        lat: latA,
+        lon: lonA
+      };
 
-      newCoordinateB = [
-        Math.sqrt(Math.pow(newCoordinateB[0], 2) + Math.pow(newCoordinateB[1], 2)),
-        0
-      ];
+      const pointBData = {
+        id: 'pointB',
+        x: distanceBtoA,
+        y: 0,
+        lat: latB,
+        lon: lonB
+      };
 
-      newData = newData.map(item => ({
-        h: [
-          Math.sqrt(Math.pow(item.h[0], 2) + Math.pow(item.h[1], 2)),
-          0
-        ],
-        p: item.p,
-        x: item.x,
-        y: item.y,
-        id: item.id
-      }));
-      console.log("final Data", "newA:", newCoordinateA, "newB:", newCoordinateB, "newData:", newData);
+      const newData = [...pointsData, pointAData, pointBData];
 
-      newData.sort((a, b) => a.x - b.x);
+      console.log('New Data:', newData);
 
+
+    // draw graphic
       chartOptions.value = {
         ...chartOptions.value,
         xaxis: {
-          categories: points.map((item) => item.geometry.coordinates[0]),
+          categories: newData.map((item) => item.x.toFixed(2)),
         },
       };
 
-      console.log("chartOptions.value.xaxis", chartOptions.value.xaxis);
+      newData.sort((a, b) => a.x - b.x);
 
       series.value = [
         {
