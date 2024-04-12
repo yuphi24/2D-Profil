@@ -102,6 +102,78 @@ const initialChartOptions = {
 const chartOptions = initialChartOptions;
 const series = ref([]);
 
+const coordinateA = ref();
+const coordinateB = ref();
+
+function updatePoints() {
+  console.log("function updatePoints is called");
+  // 既存の pointAB ソースとレイヤーを削除
+  if (props.map.getLayer('pointAB')) {
+    props.map.removeLayer('pointAB');
+  };
+  if (props.map.getSource('pointAB')) {
+    props.map.removeSource('pointAB');
+  };
+
+  const pointAB = {
+    'type': 'FeatureCollection',
+    'features': [
+      {
+        'type': 'Feature',
+        'geometry': {
+          'type': 'Point',
+          'coordinates': coordinateA.value
+        },
+        'properties': {'marker-symbol': 'A'}
+      },
+      {
+        'type': 'Feature',
+        'geometry': {
+          'type': 'Point',
+          'coordinates': coordinateB.value
+        },
+        'properties': {'marker-symbol': 'B'}
+      }
+    ]
+  };
+
+  function addPoints() {
+    console.log("function addPoints is called");
+
+    props.map.addSource('pointAB', {
+      'type': 'geojson',
+      'data': pointAB
+    });
+
+    props.map.addLayer({
+      'id': "pointAB",
+      'type': "symbol",
+      'source': "pointAB",
+      layout: {
+        'text-field': ['get', 'marker-symbol'],
+        'text-offset': [0, 1.0],
+      }
+    });
+  };
+
+  addPoints();
+
+};
+
+watch([coordinateA, coordinateB], () => {
+  console.log("coordinateA&B are changed");
+  updatePoints();
+});
+
+function deletePointAB () {
+  if (props.map.getLayer('pointAB')) {
+    props.map.removeLayer('pointAB');
+  };
+  if (props.map.getSource('pointAB')) {
+    props.map.removeSource('pointAB');
+  };
+};
+
 // add HF-Data in the Chart
 const addHFData = async () => {
   const data = draw.getAll();
@@ -112,69 +184,20 @@ const addHFData = async () => {
       console.log("points data within 150km", points);
 
     // draw Point A & B
-      const coordinateA = line.geometry.coordinates[1];
-      const coordinateB = line.geometry.coordinates[0];
-      console.log("A:", coordinateA, "B:", coordinateB);
-
-      function addPoints() {
-        // 既存の pointAB ソースとレイヤーを削除
-        if (props.map.getSource('pointAB')) {
-          props.map.removeSource('pointAB');
-          props.map.removeLayer('pointAB');
-        }
-
-        const pointAB = {
-          'type': 'FeatureCollection',
-          'features': [
-            {
-              'type': 'Feature',
-              'geometry': {
-                'type': 'Point',
-                'coordinates': coordinateA
-              },
-              'properties': {'marker-symbol': 'A'}
-            },
-            {
-              'type': 'Feature',
-              'geometry': {
-                'type': 'Point',
-                'coordinates': coordinateB
-              },
-              'properties': {'marker-symbol': 'B'}
-            }
-          ]
-        };
-
-        props.map.addSource("pointAB", {
-          'type': 'geojson',
-          'data': pointAB
-        });
-
-        props.map.addLayer({
-          'id': "pointAB",
-          'type': "symbol",
-          'source': "pointAB",
-          layout: {
-            'text-field': ['get', 'marker-symbol'],
-            'text-offset': [0, 1.0],
-          }
-        });
-      };
-
-      watch([coordinateA, coordinateB], () => {
-        addPoints();
-      });
+      coordinateA.value = line.geometry.coordinates[1];
+      coordinateB.value = line.geometry.coordinates[0];
+      console.log("A:", coordinateA.value, "B:", coordinateB.value);
 
     // Coordinates transformation 1
-      const latA = coordinateA[1];
-      const lonA = coordinateA[0];
+      const latA = coordinateA.value[1];
+      const lonA = coordinateA.value[0];
 
-      const latB = coordinateB[1];
-      const lonB = coordinateB[0];
+      const latB = coordinateB.value[1];
+      const lonB = coordinateB.value[0];
 
       const pointsData = points.map((item) => ({
         id: item.properties.id,
-        y: item.properties.q,
+        y: item.properties.q.toFixed(3),
         lat: item.geometry.coordinates[1], 
         lon: item.geometry.coordinates[0],
       }));
@@ -262,6 +285,7 @@ const addHFData = async () => {
 // to allow parent component to use function addHFData
 defineExpose({
   addHFData,
+  deletePointAB,
 });
 
 const emit = defineEmits(["close-event"]);

@@ -194,6 +194,7 @@ function changeNewPointColor(color, pointIds) {
 function backPointColor() {
   console.log("backPointColor is called");
   map.value.setPaintProperty("sites", "circle-color", defaultCircleColor.value);
+  heatFlowChart.value.deletePointAB();
 };
 
 // for CButtonGroup
