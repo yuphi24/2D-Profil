@@ -22,25 +22,50 @@ const initialChartOptions = {
   },
   colors: ["transparent"],
   dataLabels: {
-    enabled: true,
+    enabled: false,
     position: "top",
     style: {
       colors: ["#333"],
     },
     offsetX: 10,
     offsetY: -5,
-    formatter: function (val, opts) {
+    formatter: function(val, opts) {
       const { seriesIndex, dataPointIndex, w } = opts;
       const id = w.config.series[seriesIndex].data[dataPointIndex].id;
       return "id" + ":  " + id;
     },
   },
   markers: {
-    size: 3,
+    size: 2,
     colors: "#fff",
     strokeColors: "gray",
     strokeWidth: 2,
     fillOpacity: 1,
+    onClick: function(e) {
+      console.log("clicked!");
+    },
+  },
+  tooltip: {
+    y: {
+      title: {
+        formatter: () => "q:",
+      },
+      formatter: function (y) {
+        if(typeof y !== "undefined") {
+          return  y.toFixed(3);
+        }
+        return y; 
+      }
+    },
+    x: {
+      formatter: function(val, opts) {
+      const { seriesIndex, dataPointIndex, w } = opts;
+      const id = w.config.series[seriesIndex].data[dataPointIndex].id;
+      return "id" + ":  " + id;
+      }
+    },
+    shared: false,
+    intersect: true,
   },
   fill: {
     type: "gradient",
@@ -52,17 +77,17 @@ const initialChartOptions = {
       colorStops: [
         {
           offset: 0,
-          color: "#e61e1e",
+          color: "#50bcc9",
           opacity: 1,
         },
         {
           offset: 50,
-          color: "#e6e31e",
+          color: "#7dcdd7",
           opacity: 0.75,
         },
         {
           offset: 100,
-          color: "#1e9de6",
+          color: "#e6f5f7",
           opacity: 1,
         },
       ],
@@ -91,6 +116,9 @@ const initialChartOptions = {
     title: {
       text: "Distance",
     },
+    tooltip: {
+      enabled: false
+    }
   },
   yaxis: {
     title: {
@@ -378,5 +406,46 @@ const onDragStart = () => {
   position: absolute;
   right: 26px;
   top: 2px;
+}
+
+.arrow_box {
+  position: relative;
+  background: #555;
+  border: 2px solid #000000;
+}
+.arrow_box:after, .arrow_box:before {
+  right: 100%;
+  top: 50%;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+
+.arrow_box:after {
+  border-color: rgba(85, 85, 85, 0);
+  border-right-color: #555;
+  border-width: 10px;
+  margin-top: -10px;
+}
+.arrow_box:before {
+  border-color: rgba(0, 0, 0, 0);
+  border-right-color: #000000;
+  border-width: 13px;
+  margin-top: -13px;
+}
+
+#chart .apexcharts-tooltip {
+  color: #fff;
+  transform: translateX(10px) translateY(10px);
+  overflow: visible !important;
+  white-space: normal !important;
+}
+
+#chart .apexcharts-tooltip span {
+  padding: 5px 10px;
+  display: inline-block;
 }
 </style>
