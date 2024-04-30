@@ -10,7 +10,7 @@ export const useAnalysisFunctionsStore = defineStore(
     let line = ref(null);
 
     function getPointsWithin150km(event) {
-      console.log("function 'getPointsWithin150km' is called")
+      console.log("function 'getPointsWithin150km' is called");
       const lineCoordinates = event.features[0].geometry.coordinates;
       console.log("lineCoordinates:", lineCoordinates);
       line.value = turf.lineString(lineCoordinates);

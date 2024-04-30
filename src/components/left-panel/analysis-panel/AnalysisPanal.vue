@@ -3,6 +3,7 @@
 import Multiselect from "vue-multiselect";
 import { useMeasurementStore } from "@/store/measurements";
 import { useSelectPropatiesStore } from "@/store/selectPropaties";
+import { CButton } from "@coreui/bootstrap-vue";
 
 const selectPropaties = useSelectPropatiesStore();
 const updateChart = selectPropaties.updateChart;
@@ -55,6 +56,9 @@ console.log(measurements.dataSchema);
         @select="updateChart"
       >
       </multiselect>
+      <p class="d-grid gap-2">
+        <CButton color="secondary" variant="outline">All Properties</CButton>
+      </p>
     </div>
   </div>
 </template>

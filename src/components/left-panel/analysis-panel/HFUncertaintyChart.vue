@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, defineExpose, defineEmits } from "vue";
+import { ref, defineExpose, defineEmits } from "vue";
 import VueApexCharts from "vue3-apexcharts";
 import { useMapControlsStore } from "@/store/mapControls";
 import { useAnalysisFunctionsStore } from "@/store/analysisFunctions";
@@ -107,7 +107,6 @@ const addHFUData = async () => {
     try {
       const points = analysisFunctions.pointsWithin150km;
       console.log("points data within 150km", points);
-      
       const newData = points.map((item) => ({
         x: item.geometry.coordinates[0],
         y: item.properties.q_uncertainty,
@@ -151,31 +150,29 @@ const emit = defineEmits(["close-event"]);
 // for drag
 const drag = ref(null);
 const onMouseDown = (event) => {
-    let shiftX = event.clientX - drag.value.getBoundingClientRect().left;
-    let shiftY = event.clientY - drag.value.getBoundingClientRect().top;
-  
-    drag.value.style.position = 'absolute';
-    drag.value.style.zIndex = 1000;
-    document.body.appendChild(drag.value);
-  
+  let shiftX = event.clientX - drag.value.getBoundingClientRect().left;
+  let shiftY = event.clientY - drag.value.getBoundingClientRect().top;
+  drag.value.style.position = "absolute";
+  drag.value.style.zIndex = 1000;
+  document.body.appendChild(drag.value);
+  moveAt(event.pageX, event.pageY);
+
+  function moveAt(pageX, pageY) {
+    drag.value.style.left = pageX - shiftX + "px";
+    drag.value.style.top = pageY - shiftY + "px";
+  }
+
+  const onMouseMove = (event) => {
     moveAt(event.pageX, event.pageY);
-  
-    function moveAt(pageX, pageY) {
-      drag.value.style.left = pageX - shiftX + 'px';
-      drag.value.style.top = pageY - shiftY + 'px';
-    }
-  
-    const onMouseMove = (event) => {
-      moveAt(event.pageX, event.pageY);
-    };
-  
-    document.addEventListener('mousemove', onMouseMove);
-  
-    drag.value.onmouseup = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      drag.value.onmouseup = null;
-    };
   };
+
+  document.addEventListener("mousemove", onMouseMove);
+
+  drag.value.onmouseup = () => {
+    document.removeEventListener("mousemove", onMouseMove);
+    drag.value.onmouseup = null;
+  };
+};
 const onDragStart = () => {
   return false;
 };
@@ -193,26 +190,26 @@ const onDragStart = () => {
         >
         </apexchart>
       </CCard>
-    <CCard class="h-100 p-0" style="width: 18%">
-      <CCardHeader>About this Data</CCardHeader>
-    </CCard>
+      <CCard class="h-100 p-0" style="width: 18%">
+        <CCardHeader>About this Data</CCardHeader>
+      </CCard>
     </CRow>
-    <svg 
+    <svg
       xmlns="http://www.w3.org/2000/svg"
       width="20"
       height="20"
       fill="gray"
       viewBox="0 0 512 512"
-      @mousedown="onMouseDown" 
+      @mousedown="onMouseDown"
       @dragstart="onDragStart"
     >
       <!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.-->
-      <path 
+      <path
         d="M278.6 9.4c-12.5-12.5-32.8-12.5-45.3 0l-64 64c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l9.4-9.4V224H109.3l9.4-9.4c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-64 64c-12.5 12.5-12.5 32.8 0 45.3l64 64c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-9.4-9.4H224V402.7l-9.4-9.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l64 64c12.5 12.5 32.8 12.5 45.3 0l64-64c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-9.4 9.4V288H402.7l-9.4 9.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l64-64c12.5-12.5 12.5-32.8 0-45.3l-64-64c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l9.4 9.4H288V109.3l9.4 9.4c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-64-64z"
       />
     </svg>
     <CCloseButton
-      class="position-absolute top-0 end-0" 
+      class="position-absolute top-0 end-0"
       @click="emit('close-event')"
     />
   </div>

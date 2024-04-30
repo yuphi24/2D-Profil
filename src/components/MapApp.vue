@@ -1,6 +1,6 @@
 <script setup>
 // vue
-import { onMounted, markRaw, ref, watch, computed } from "vue";
+import { onMounted, markRaw, ref, watch } from "vue";
 
 // turf
 // import * as turf from "@turf/turf";
@@ -68,7 +68,10 @@ watch(
   () => selectPropaties.selectedChartComponent,
   (newValue, oldValue) => {
     console.log("newValue:", newValue, "oldValue:", oldValue);
-    console.log("selectedChartComponent from MapApp.vue:", selectPropaties.selectedChartComponent);
+    console.log(
+      "selectedChartComponent from MapApp.vue:",
+      selectPropaties.selectedChartComponent
+    );
     if (newValue === "HeatFlowChart") {
       displayedChartNr.value = 1;
       console.log("displayedChartNr", displayedChartNr.value);
@@ -90,15 +93,15 @@ watch(
 const setIsClosed = () => (displayedChartNr.value = 0);
 
 // avoid to get points data by drawing line, if it's not 2d profil modus
-watch(displayedChartNr, currentDisplayChartNr => {
-  console.log("currentDisplayChartNr:",currentDisplayChartNr);
-  const drawEvents = ["draw.create", "draw.update", "draw.delete"]
+watch(displayedChartNr, (currentDisplayChartNr) => {
+  console.log("currentDisplayChartNr:", currentDisplayChartNr);
+  const drawEvents = ["draw.create", "draw.update", "draw.delete"];
   const createUpdateEvents = ["draw.create", "draw.update"];
   const deleteEvent = "draw.delete";
 
-  if(currentDisplayChartNr === 1) {
+  if (currentDisplayChartNr === 1) {
     // Heat Flow
-    createUpdateEvents.forEach(event => {
+    createUpdateEvents.forEach((event) => {
       map.value.on(event, function (e) {
         getPoint(e);
         updateQChart(e);
@@ -108,7 +111,7 @@ watch(displayedChartNr, currentDisplayChartNr => {
       updateQChart(e);
       backPointColor(e);
     });
-    drawEvents.forEach(event => {
+    drawEvents.forEach((event) => {
       map.value.off(event, function (e) {
         updateDepthChart(e);
         updateQCChart(e);
@@ -116,7 +119,7 @@ watch(displayedChartNr, currentDisplayChartNr => {
     });
   } else if (currentDisplayChartNr === 2) {
     // Heat Flow Uncertainty
-    createUpdateEvents.forEach(event => {
+    createUpdateEvents.forEach((event) => {
       map.value.on(event, function (e) {
         getPoint(e);
         updateQCChart(e);
@@ -126,7 +129,7 @@ watch(displayedChartNr, currentDisplayChartNr => {
       updateQCChart(e);
       backPointColor(e);
     });
-    drawEvents.forEach(event => {
+    drawEvents.forEach((event) => {
       map.value.off(event, function (e) {
         updateQChart(e);
         updateDepthChart(e);
@@ -134,7 +137,7 @@ watch(displayedChartNr, currentDisplayChartNr => {
     });
   } else if (currentDisplayChartNr === 3) {
     // Total Measured Depth
-    createUpdateEvents.forEach(event => {
+    createUpdateEvents.forEach((event) => {
       map.value.on(event, function (e) {
         getPoint(e);
         updateDepthChart(e);
@@ -144,19 +147,19 @@ watch(displayedChartNr, currentDisplayChartNr => {
       updateDepthChart(e);
       backPointColor(e);
     });
-    drawEvents.forEach(event => {
+    drawEvents.forEach((event) => {
       map.value.off(event, function (e) {
         updateQChart(e);
         updateQCChart(e);
       });
     });
   } else {
-    createUpdateEvents.forEach(event => {
+    createUpdateEvents.forEach((event) => {
       map.value.off(event, function (e) {
         getPoint(e);
       });
     });
-    drawEvents.forEach(event => {
+    drawEvents.forEach((event) => {
       map.value.off(event, function (e) {
         updateQChart(e);
         updateQCChart(e);
@@ -176,26 +179,33 @@ watch(
     console.log("points color will be changed");
     console.log("new:", newPoints, "old:", oldPoints);
 
-    const newPointIds = newPoints.map(point => point.id);
+    const newPointIds = newPoints.map((point) => point.id);
     console.log("newPointIds", newPointIds);
     changeNewPointColor(newCircleColor.value, newPointIds);
 
-    const oldPointIds = oldPoints.map(point => point.id);
+    const oldPointIds = oldPoints.map((point) => point.id);
     console.log("oldPointIds", oldPointIds);
-  }, { deep: true }
+  },
+  { deep: true }
 );
 
 function changeNewPointColor(color, pointIds) {
   console.log("pointId:", pointIds);
   console.log("color:", color);
-  map.value.setPaintProperty("sites", "circle-color", ["match", ["get", "id"], pointIds, color, defaultCircleColor.value]);
-};
+  map.value.setPaintProperty("sites", "circle-color", [
+    "match",
+    ["get", "id"],
+    pointIds,
+    color,
+    defaultCircleColor.value,
+  ]);
+}
 
 function backPointColor() {
   console.log("backPointColor is called");
   map.value.setPaintProperty("sites", "circle-color", defaultCircleColor.value);
   heatFlowChart.value.deletePointAB();
-};
+}
 
 // for CButtonGroup
 const panelTitle = ref("");
@@ -320,8 +330,8 @@ onMounted(() => {
   <div class="map-wrap">
     <div class="map" ref="mapContainer" @mousemove="updateLatLng"></div>
     <HeatFlowChart
-      ref="heatFlowChart" 
-      v-if="displayedChartNr === 1" 
+      ref="heatFlowChart"
+      v-if="displayedChartNr === 1"
       @close-event="setIsClosed()"
       :map="map"
     />

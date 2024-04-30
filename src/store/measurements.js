@@ -219,8 +219,9 @@ export const useMeasurementStore = defineStore("measurements", () => {
   }
 
   function setSelectableNumberProperties() {
-    const propertiesKey = Object.keys(dataSchema.value.properties)
-    .filter(key => dataSchema.value.properties[key].type === "number");
+    const propertiesKey = Object.keys(dataSchema.value.properties).filter(
+      (key) => dataSchema.value.properties[key].type === "number"
+    );
     let selection = [];
 
     propertiesKey.forEach((propertyName) => {
