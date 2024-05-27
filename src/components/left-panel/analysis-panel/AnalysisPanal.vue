@@ -1,20 +1,63 @@
 <script setup>
-// import { ref } from "vue";
+import { ref, defineEmits } from "vue";
 import Multiselect from "vue-multiselect";
 import { useMeasurementStore } from "@/store/measurements";
-import { useSelectPropatiesStore } from "@/store/selectPropaties";
-import { CButton } from "@coreui/bootstrap-vue";
+import { useSelectPropertiesStore } from "@/store/selectProperties";
+import {
+  CButton,
+  CForm,
+  CFormLabel,
+  CFormInput,
+  CFormText,
+} from "@coreui/bootstrap-vue";
 
-const selectPropaties = useSelectPropatiesStore();
-const updateChart = selectPropaties.updateChart;
-
+const selectProperties = useSelectPropertiesStore();
+const updateSelectedProperty = selectProperties.updateSelectedProperty;
+const updateChart = selectProperties.updateChart;
+const updateSelectedProperties = selectProperties.updateSelectedProperties;
 const measurements = useMeasurementStore();
 
-// const selectPropaties = useSelectPropatiesStore();
-// const updateChart = selectPropaties.updateChart;
+const error = ref(false);
 
-console.log("data schema from AnalysisPanel");
+console.log("dataSchema from AnalysisPanel");
 console.log(measurements.dataSchema);
+
+const emit = defineEmits(["collapse-event", "toggle-event"]);
+
+const addTag = (newTag) => {
+  const tag = {
+    title: newTag,
+    key: newTag.substring(0, 2) + Math.floor(Math.random() * 10000000),
+  };
+  measurements.selectableNumberProperties.value.push(tag);
+};
+
+const handleEnterKey = () => {
+  if (validateDistance()) {
+    updateChart();
+    emit("collapse-event");
+    emit("toggle-event");
+  }
+};
+
+const handleOkButton = () => {
+  if (validateDistance()) {
+    updateChart();
+    emit("collapse-event");
+    emit("toggle-event");
+  }
+};
+
+const validateDistance = () => {
+  const distance = parseInt(selectProperties.distance2, 10);
+  if (distance < 1 || distance > 500 || isNaN(distance)) {
+    error.value = true;
+    return false;
+  } else {
+    error.value = false;
+    return true;
+  }
+};
 </script>
 
 <template>
@@ -46,19 +89,83 @@ console.log(measurements.dataSchema);
     </button>
   </p>
   <div class="collapse" id="dataDrivenColoring">
-    <div class="card card-body">
+    <div class="card card-body mb-2">
+      <label>select one property</label>
       <multiselect
-        v-model="selectPropaties.selectedProperty"
+        v-model="selectProperties.selectedProperty"
         :options="measurements.selectableNumberProperties"
         label="title"
         placeholder="Selct Property"
-        :allow-empty="false"
-        @select="updateChart"
+        @select="updateSelectedProperty"
+        @remove="updateSelectedProperty"
       >
       </multiselect>
-      <p class="d-grid gap-2">
-        <CButton color="secondary" variant="outline">All Properties</CButton>
-      </p>
+      <CForm>
+        <CFormLabel for="distanceInput1">Distance value</CFormLabel>
+        <CFormInput
+          type="number"
+          v-model="selectProperties.distance1"
+          id="distanceInput1"
+          placeholder="enter distance in km"
+          min="1"
+          max="500"
+          aria-describedby="exampleFormControlInputHelpInline"
+        />
+        <CFormText as="span" id="exampleFormControlInputHelpInline">
+          Distance must be 1-500 km long.
+        </CFormText>
+      </CForm>
+      <CButton
+        type="button"
+        class="btn btn-outline-primary mt-2"
+        @click="updateChart()"
+      >
+        OK
+      </CButton>
+    </div>
+    <div class="card card-body">
+      <label>select one or two properties</label>
+      <multiselect
+        v-model="selectProperties.selectedMultiProperty"
+        placeholder="Search or add a property"
+        label="title"
+        track-by="key"
+        :options="measurements.selectableNumberProperties"
+        :multiple="true"
+        :taggable="true"
+        :max="2"
+        @tag="addTag"
+        @select="updateSelectedProperties"
+        @remove="updateSelectedProperties"
+      >
+      </multiselect>
+      <CForm onsubmit="return false">
+        <CFormLabel for="distanceInput2">Distance value</CFormLabel>
+        <CFormInput
+          type="number"
+          v-model="selectProperties.distance2"
+          id="distanceInput2"
+          placeholder="enter distance in km"
+          min="1"
+          max="500"
+          aria-describedby="exampleFormControlInputHelpInline"
+          @keypress.enter="handleEnterKey"
+        />
+        <CFormText
+          as="span"
+          id="exampleFormControlInputHelpInline"
+          :class="{ 'text-danger': error }"
+        >
+          Distance must be 1-500 km long.
+        </CFormText>
+      </CForm>
+      <CButton
+        type="button"
+        class="btn btn-outline-primary mt-2"
+        @click="handleOkButton"
+      >
+        OK
+      </CButton>
     </div>
   </div>
 </template>

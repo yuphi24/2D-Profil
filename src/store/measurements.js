@@ -15,6 +15,7 @@ export const useMeasurementStore = defineStore("measurements", () => {
   const dataSchema = ref(null);
   const selectableProperties = ref(null);
   const selectableNumberProperties = ref(null);
+  const selectableNonNumberProperties = ref(null);
   const isLoading = ref(true);
 
   /**
@@ -31,6 +32,7 @@ export const useMeasurementStore = defineStore("measurements", () => {
         console.log(apiSchema);
         setSelectableProperties();
         setSelectableNumberProperties();
+        setSelectableNonNumberProperties();
       });
     } catch (e) {
       console.log("error in fetching data schema. " + e);
@@ -194,6 +196,7 @@ export const useMeasurementStore = defineStore("measurements", () => {
     let optionsObject = {};
     optionsObject["title"] = propertyObj.title;
     optionsObject["key"] = propertyName;
+    optionsObject["units"] = propertyObj.units;
 
     return optionsObject;
   }
@@ -235,11 +238,29 @@ export const useMeasurementStore = defineStore("measurements", () => {
     console.log(selectableNumberProperties.value);
   }
 
+  function setSelectableNonNumberProperties() {
+    const propertiesKey = Object.keys(dataSchema.value.properties).filter(
+      (key) => dataSchema.value.properties[key].type == undefined
+    );
+    let selection = [];
+
+    propertiesKey.forEach((propertyName) => {
+      if (isPropertySelectable(propertyName)) {
+        selection.push(createVueMultiselectOption(propertyName));
+      }
+    });
+
+    selectableNonNumberProperties.value = selection;
+    console.log("check selectable properties");
+    console.log(selectableNonNumberProperties.value);
+  }
+
   return {
     geojson,
     dataSchema,
     selectableProperties,
     selectableNumberProperties,
+    selectableNonNumberProperties,
     isLoading,
     fetchAPIData,
     fetchAPIDataSchema,

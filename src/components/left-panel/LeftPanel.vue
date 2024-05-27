@@ -30,7 +30,11 @@ const emit = defineEmits(["collapse-event", "toggle-event"]);
     />
   </COffcanvasHeader>
   <COffcanvasBody>
-    <AnalysisPanal v-if="props.title === 'Analysis'" />
+    <AnalysisPanal
+      v-if="props.title === 'Analysis'"
+      @collapse-event="emit('collapse-event')"
+      @toggle-event="emit('toggle-event')"
+    />
   </COffcanvasBody>
 </template>
 

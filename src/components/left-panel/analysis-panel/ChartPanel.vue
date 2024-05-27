@@ -3,7 +3,7 @@ import { ref, watch, defineExpose, defineEmits, defineProps } from "vue";
 import VueApexCharts from "vue3-apexcharts";
 import { useMapControlsStore } from "@/store/mapControls";
 import { useAnalysisFunctionsStore } from "@/store/analysisFunctions";
-import { useSelectPropatiesStore } from "@/store/selectPropaties";
+import { useSelectPropertiesStore } from "@/store/selectProperties";
 import {
   CRow,
   CCard,
@@ -19,15 +19,7 @@ const apexchart = VueApexCharts;
 const mapControls = useMapControlsStore();
 const draw = mapControls.mapboxDraw;
 const analysisFunctions = useAnalysisFunctionsStore();
-const selectPropaties = useSelectPropatiesStore();
-
-console.log("test", selectPropaties.selectedProperty);
-
-/* import { useMeasurementStore } from "@/store/measurements";
-const measurements = useMeasurementStore();
-const units = measurements.dataSchema.properties["q"].units;
-const title = measurements.dataSchema.properties["q"].title;
-console.log("dataSchema units:", title, units); */
+const selectProperties = useSelectPropertiesStore();
 
 const showText = ref(false);
 function hideText() {
@@ -132,11 +124,27 @@ const initialChartOptions = {
       text: "Distance from A to B (km)",
     },
   },
-  yaxis: {
-    title: {
-      text: selectPropaties.selectedProperty.title + " (" + selectPropaties.selectedProperty.units + ")",
+  yaxis: [
+    {
+      title: {
+        text:
+          selectProperties.selectedProperty.title +
+          " (" +
+          selectProperties.selectedProperty.units +
+          ")",
+      },
     },
-  },
+    {
+      opposite: true,
+      title: {
+        text:
+          selectProperties.selectedProperty.title +
+          " (" +
+          selectProperties.selectedProperty.units +
+          ")",
+      },
+    },
+  ],
 };
 
 const chartOptions = initialChartOptions;
@@ -248,7 +256,7 @@ const addHFData = async () => {
   }
   if (data.features.length > 0) {
     try {
-      const points = analysisFunctions.pointsWithin150km;
+      const points = analysisFunctions.pointsWithinDistance;
       const line = analysisFunctions.line;
       console.log("points data within 150km", points);
 
@@ -264,9 +272,17 @@ const addHFData = async () => {
       const latB = coordinateB.value[1];
       const lonB = coordinateB.value[0];
 
-      const pointsData = points.map((item) => ({
-        id: item.properties.id,
-        y: item.properties.q.toFixed(3),
+      const pointsData1 = points.map((item) => ({
+        id: item.properties.ID,
+        y: item.properties[selectProperties.selectedProperty.key].toFixed(3),
+        lon: item.geometry.coordinates[0],
+        lat: item.geometry.coordinates[1],
+        properties: item.properties,
+      }));
+
+      const pointsData2 = points.map((item) => ({
+        id: item.properties.ID,
+        y: item.properties[selectProperties.selectedProperty.key].toFixed(3),
         lon: item.geometry.coordinates[0],
         lat: item.geometry.coordinates[1],
         properties: item.properties,
@@ -279,12 +295,14 @@ const addHFData = async () => {
         "latB & lonB:",
         latB,
         lonB,
-        "pointsData:",
-        pointsData
+        "pointsData1:",
+        pointsData1,
+        "pointsData2:",
+        pointsData2
       );
 
       // Distance to Point A
-      pointsData.forEach((point) => {
+      pointsData1.forEach((point) => {
         const distanceToA = Distance(latA, lonA, point.lat, point.lon, "K");
         point.x = distanceToA;
         console.log(
@@ -310,7 +328,7 @@ const addHFData = async () => {
         lon: lonB,
       };
 
-      const newData = [...pointsData, pointAData, pointBData];
+      const newData = [...pointsData1, pointAData, pointBData];
 
       console.log("New Data:", newData);
 
@@ -335,7 +353,7 @@ const addHFData = async () => {
     } catch (error) {
       console.error("Error occured:", error);
     }
-  } else {
+  } else if (data.features.length === 0) {
     chartOptions.value = initialChartOptions;
     series.value = [];
   }

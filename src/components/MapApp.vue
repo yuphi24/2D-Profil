@@ -10,7 +10,7 @@ import { Map, Popup } from "maplibre-gl";
 
 // data
 import maps from "./left-panel/settings-panel/maps.json";
-import geojson from "@/assets/data/heatflow_sample_data.geojson";
+import geojson from "@/assets/data/parent_elements.geojson";
 import schemaURL from "@/assets/data/api_schema.json";
 
 // store
@@ -20,10 +20,10 @@ const draw = mapControls.mapboxDraw;
 
 import { useAnalysisFunctionsStore } from "@/store/analysisFunctions";
 const analysisFunctions = useAnalysisFunctionsStore();
-const getPoint = analysisFunctions.getPointsWithin150km;
+const getPoint = analysisFunctions.getPointsWithinDistance;
 
-import { useSelectPropatiesStore } from "@/store/selectPropaties";
-const selectPropaties = useSelectPropatiesStore();
+import { useSelectPropertiesStore } from "@/store/selectProperties";
+const selectProperties = useSelectPropertiesStore();
 
 import { useMeasurementStore } from "@/store/measurements";
 const measurements = useMeasurementStore();
@@ -35,12 +35,13 @@ measurements.isLoading = false;
 import { CButton, CButtonGroup, COffcanvas } from "@coreui/bootstrap-vue";
 import CursorCoordinates from "./map/CursorCoordinates.vue";
 import LeftPanel from "./left-panel/LeftPanel.vue";
-import HeatFlowChart from "./left-panel/analysis-panel/HeatFlowChart.vue";
+import ChartPanel from "./left-panel/analysis-panel/ChartPanel.vue";
 import HFUncertaintyChart from "./left-panel/analysis-panel/HFUncertaintyChart.vue";
 import MeasuredDepthChart from "./left-panel/analysis-panel/MeasuredDepthChart.vue";
 import TrueVerticalDepthChart from "./left-panel/analysis-panel/TrueVerticalDepthChart.vue";
+import RightPanel from "./right-panel/RightPanel.vue";
+import MapLegend from "./map/MapLegend.vue";
 
-// to call function "addHFData from LineChart.vue"
 const heatFlowChart = ref();
 const heatFlowUChart = ref();
 const measuredDepthChart = ref();
@@ -65,32 +66,28 @@ const navbarTitles = ref(["Settings", "Filter", "Statistics", "Analysis"]);
 const displayedChartNr = ref(0);
 console.log("displayedChartNr:", displayedChartNr.value);
 watch(
-  () => selectPropaties.selectedChartComponent,
+  () => selectProperties.selectedChartComponent,
   (newValue, oldValue) => {
     console.log("newValue:", newValue, "oldValue:", oldValue);
-    console.log(
-      "selectedChartComponent from MapApp.vue:",
-      selectPropaties.selectedChartComponent
-    );
     if (newValue === "HeatFlowChart") {
       displayedChartNr.value = 1;
-      console.log("displayedChartNr", displayedChartNr.value);
     } else if (newValue === "HFUncertaintyChart") {
       displayedChartNr.value = 2;
-      console.log("displayedChartNr", displayedChartNr.value);
     } else if (newValue === "MeasuredDepthChart") {
       displayedChartNr.value = 3;
-      console.log("displayedChartNr", displayedChartNr.value);
     } else if (newValue === "TrueVerticalDepthChart") {
       displayedChartNr.value = 4;
-      console.log("displayedChartNr", displayedChartNr.value);
+    } else if (newValue === "2DProfil") {
+      displayedChartNr.value = 5;
     } else {
       displayedChartNr.value = 0;
-      console.log("displayedChartNr", displayedChartNr.value);
     }
   }
 );
-const setIsClosed = () => (displayedChartNr.value = 0);
+const setIsClosed = () => {
+  displayedChartNr.value = 0;
+  selectProperties.selectedChartComponent = "";
+};
 
 // avoid to get points data by drawing line, if it's not 2d profil modus
 watch(displayedChartNr, (currentDisplayChartNr) => {
@@ -103,7 +100,7 @@ watch(displayedChartNr, (currentDisplayChartNr) => {
     // Heat Flow
     createUpdateEvents.forEach((event) => {
       map.value.on(event, function (e) {
-        getPoint(e);
+        getPoint(e, selectProperties.distance);
         updateQChart(e);
       });
     });
@@ -121,7 +118,7 @@ watch(displayedChartNr, (currentDisplayChartNr) => {
     // Heat Flow Uncertainty
     createUpdateEvents.forEach((event) => {
       map.value.on(event, function (e) {
-        getPoint(e);
+        getPoint(e, selectProperties.distance);
         updateQCChart(e);
       });
     });
@@ -139,7 +136,7 @@ watch(displayedChartNr, (currentDisplayChartNr) => {
     // Total Measured Depth
     createUpdateEvents.forEach((event) => {
       map.value.on(event, function (e) {
-        getPoint(e);
+        getPoint(e, selectProperties.distance);
         updateDepthChart(e);
       });
     });
@@ -156,7 +153,7 @@ watch(displayedChartNr, (currentDisplayChartNr) => {
   } else {
     createUpdateEvents.forEach((event) => {
       map.value.off(event, function (e) {
-        getPoint(e);
+        getPoint(e, selectProperties.distance);
       });
     });
     drawEvents.forEach((event) => {
@@ -171,19 +168,19 @@ watch(displayedChartNr, (currentDisplayChartNr) => {
 
 // Color setting
 const defaultCircleColor = ref("#41b6c4");
-const newCircleColor = ref("#fa9b1e");
+//const newCircleColor = ref("#fa9b1e");
 
-watch(
-  () => analysisFunctions.pointsWithin150km,
+/* watch(
+  () => analysisFunctions.pointsWithinDistance,
   (newPoints, oldPoints) => {
     console.log("points color will be changed");
     console.log("new:", newPoints, "old:", oldPoints);
 
-    const newPointIds = newPoints.map((point) => point.id);
+    const newPointIds = newPoints.map((point) => point.properties.ID);
     console.log("newPointIds", newPointIds);
     changeNewPointColor(newCircleColor.value, newPointIds);
 
-    const oldPointIds = oldPoints.map((point) => point.id);
+    const oldPointIds = oldPoints.map((point) => point.properties.ID);
     console.log("oldPointIds", oldPointIds);
   },
   { deep: true }
@@ -194,17 +191,19 @@ function changeNewPointColor(color, pointIds) {
   console.log("color:", color);
   map.value.setPaintProperty("sites", "circle-color", [
     "match",
-    ["get", "id"],
+    ["get", "ID"],
     pointIds,
     color,
     defaultCircleColor.value,
   ]);
-}
+} */
 
 function backPointColor() {
   console.log("backPointColor is called");
   map.value.setPaintProperty("sites", "circle-color", defaultCircleColor.value);
-  heatFlowChart.value.deletePointAB();
+  if (displayedChartNr.value === 1) {
+    heatFlowChart.value.deletePointAB();
+  }
 }
 
 // for CButtonGroup
@@ -306,7 +305,7 @@ onMounted(() => {
     // popup id numbers
     map.value.on("click", "sites", (e) => {
       const coordinates = e.features[0].geometry.coordinates.slice();
-      const id = e.features[0].properties.id;
+      const id = e.features[0].properties.ID;
       new Popup().setLngLat(coordinates).setHTML(id).addTo(map.value);
     });
 
@@ -328,72 +327,75 @@ onMounted(() => {
 
 <template>
   <div class="map-wrap">
-    <div class="map" ref="mapContainer" @mousemove="updateLatLng"></div>
-    <HeatFlowChart
-      ref="heatFlowChart"
-      v-if="displayedChartNr === 1"
-      @close-event="setIsClosed()"
-      :map="map"
-    />
-    <HFUncertaintyChart
-      ref="heatFlowUChart"
-      v-if="displayedChartNr === 2"
-      @close-event="setIsClosed()"
-    />
-    <MeasuredDepthChart
-      ref="measuredDepthChart"
-      v-if="displayedChartNr === 3"
-      @close-event="setIsClosed()"
-    />
-    <TrueVerticalDepthChart
-      ref="trueVerticalDepthChart"
-      v-if="displayedChartNr === 4"
-      @close-event="setIsClosed()"
-    />
+    <div class="column map" ref="mapContainer" @mousemove="updateLatLng">
+      <ChartPanel
+        ref="heatFlowChart"
+        v-if="displayedChartNr === 1"
+        @close-event="setIsClosed()"
+        :map="map"
+      />
+      <HFUncertaintyChart
+        ref="heatFlowUChart"
+        v-if="displayedChartNr === 2"
+        @close-event="setIsClosed()"
+      />
+      <MeasuredDepthChart
+        ref="measuredDepthChart"
+        v-if="displayedChartNr === 3"
+        @close-event="setIsClosed()"
+      />
+      <TrueVerticalDepthChart
+        ref="trueVerticalDepthChart"
+        v-if="displayedChartNr === 4"
+        @close-event="setIsClosed()"
+      />
+      <MapLegend />
 
-    <!-- Navigation buttons -->
-    <div class="fixed-bottom">
-      <CButtonGroup role="group" aria-label="Basic example">
-        <CButton
-          color="primary"
-          v-for="title in navbarTitles"
-          :key="title"
-          @click="
-            isCollapsed ? setPanelTitle($event) : 0,
-              setIsCollapsed(),
-              toggleVisibleScrolling()
+      <!-- Navigation buttons -->
+      <div class="fixed-bottom">
+        <CButtonGroup role="group" aria-label="Basic example">
+          <CButton
+            color="primary"
+            v-for="title in navbarTitles"
+            :key="title"
+            @click="
+              isCollapsed ? setPanelTitle($event) : 0,
+                setIsCollapsed(),
+                toggleVisibleScrolling()
+            "
+            type="button"
+            class="btn btn-primary"
+          >
+            {{ title }}
+          </CButton>
+        </CButtonGroup>
+        <COffcanvas
+          :backdrop="false"
+          placement="start"
+          scroll
+          :visible="visibleScrolling"
+          @hide="
+            () => {
+              visibleScrolling = !visibleScrolling;
+            }
           "
-          type="button"
-          class="btn btn-primary"
         >
-          {{ title }}
-        </CButton>
-      </CButtonGroup>
-
-      <COffcanvas
-        :backdrop="false"
-        placement="start"
-        scroll
-        :visible="visibleScrolling"
-        @hide="
-          () => {
-            visibleScrolling = !visibleScrolling;
-          }
-        "
-      >
-        <LeftPanel
-          :title="panelTitle"
-          :map="map"
-          :activeBaseLayer="activeBaseLayer"
-          :heatFlowSchema="heatFlowSchema"
-          @collapse-event="setIsCollapsed()"
-          @toggle-event="toggleVisibleScrolling()"
-        />
-      </COffcanvas>
-
-      <div class="cursor-div">
-        <CursorCoordinates :map="map" />
+          <LeftPanel
+            :title="panelTitle"
+            :map="map"
+            :activeBaseLayer="activeBaseLayer"
+            :heatFlowSchema="heatFlowSchema"
+            @collapse-event="setIsCollapsed()"
+            @toggle-event="toggleVisibleScrolling()"
+          />
+        </COffcanvas>
+        <div class="cursor-div">
+          <CursorCoordinates :map="map" />
+        </div>
       </div>
+    </div>
+    <div class="column chart-panel" v-if="displayedChartNr === 5">
+      <RightPanel @close-event="setIsClosed()" :map="map" />
     </div>
   </div>
 </template>
@@ -408,10 +410,9 @@ onMounted(() => {
   height: 100%;
 }
 
-.map {
-  /* position: relative; */
+.column {
   width: 100%;
-  height: 100%;
+  height: 100vh;
 }
 
 .fixed-bottom {
@@ -425,5 +426,15 @@ onMounted(() => {
 .maplibregl-popup {
   max-width: 400px;
   font: 12px/20px "Helvetica Neue", Arial, Helvetica, sans-serif;
+}
+
+.chart-panel {
+  max-width: 600px;
+}
+
+@media all and (min-width: 500px) {
+  .map-wrap {
+    display: flex;
+  }
 }
 </style>
